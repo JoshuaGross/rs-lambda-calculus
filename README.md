@@ -4,6 +4,8 @@ This is an implementation of a simple [untyped lambda calculus](https://en.wikip
 
 I wrote this in December 2020 as a way to play with Rust, Nom, and brush up on Lambda Calculus basics.
 
+Unfortunately, only relatively simple expressions work - notably, the Y combinator will cause a stack overflow.
+
 ## Usage
 
 1. `cargo run examples/X` to compile the program and run a particular example.
