@@ -1,3 +1,5 @@
+#![recursion_limit="100000"]
+
 mod parser;
 mod term;
 mod machine;
