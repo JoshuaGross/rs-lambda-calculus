@@ -1,0 +1,23 @@
+SUCC := λn.λf.λx.f (n f x)
+PRED := λn.λf.λx.n (λg.λh.h (g f)) (λu.x) (λu.u)
+PLUS := λm.λn.λf.λx.m f (n f x)
+MULT := λm.λn.λf.m (n f)
+POW := λx.λy.y x
+0 := λf.λx.x
+1 := SUCC 0
+2 := SUCC 1
+3 := SUCC 2
+4 := SUCC 3
+5 := SUCC 4
+6 := SUCC 5
+7 := SUCC 6
+8 := SUCC 7
+9 := SUCC 8
+10 := SUCC 9
+20 := PLUS 10 10
+30 := MULT 10 3
+10
+20
+PRED 20
+30
+POW 2 8

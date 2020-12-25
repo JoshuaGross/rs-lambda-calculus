@@ -1,0 +1,8 @@
+TRUE := λx.λy.x
+FALSE := λx.λy.y
+AND := λp.λq.p q p
+OR := λp.λq.p p q
+NOT := λp.p FALSE TRUE
+IFTHENELSE := λp.λa.λb.p a b
+AND TRUE FALSE
+OR TRUE FALSE

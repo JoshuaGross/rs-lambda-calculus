@@ -1,0 +1,6 @@
+SUCC := λn.λf.λx.f (n f x)
+SUCC (λf.λx.x)
+SUCC (SUCC (λf.λx.x))
+SUCC (SUCC (SUCC (λf.λx.x)))
+SUCC (SUCC (SUCC (SUCC (λf.λx.x))))
+SUCC (SUCC (SUCC (SUCC (SUCC (λf.λx.x)))))
