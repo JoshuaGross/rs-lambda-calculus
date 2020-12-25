@@ -4,12 +4,11 @@ use crate::term::{Term, TermOrDef, Program};
 
 use nom::{
   branch::alt,
-  bytes::complete::{is_a, tag, take_while, take_until},
-  character::complete::{char, digit1, one_of, none_of, space0, multispace0, multispace1},
-  combinator::{map, recognize},
-  sequence::{pair, preceded, terminated},
-  multi::{fold_many0, many0, separated_list0, separated_list1},
-  number::streaming,
+  bytes::complete::{tag},
+  character::complete::{char, one_of, space0, multispace0},
+  combinator::{recognize},
+  sequence::{preceded, terminated},
+  multi::{fold_many0, many0, separated_list1},
   IResult,
 };
 

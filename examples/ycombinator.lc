@@ -1,9 +1,17 @@
+TRUE := λx.λy.x
+FALSE := λx.λy.y
+AND := λp.λq.p q p
+OR := λp.λq.p p q
+NOT := λp.p FALSE TRUE
+IFTHENELSE := λp.λa.λb.p a b
 SUCC := λn.λf.λx.f (n f x)
 PRED := λn.λf.λx.n (λg.λh.h (g f)) (λu.x) (λu.u)
 PLUS := λm.λn.λf.λx.m f (n f x)
 SUB := λm.λn.n PRED m
 MULT := λm.λn.λf.m (n f)
 POW := λx.λy.y x
+ISZERO := λn.n (λx.FALSE) TRUE
+LEQ := λm.λn.ISZERO (SUB m n)
 0 := λf.λx.x
 1 := SUCC 0
 2 := SUCC 1
@@ -15,10 +23,6 @@ POW := λx.λy.y x
 8 := SUCC 7
 9 := SUCC 8
 10 := SUCC 9
-20 := PLUS 10 10
-30 := MULT 10 3
-10
-20
-PRED 20
-30
-POW 2 8
+Y := λg.(λx.g (x x)) (λx.g (x x))
+FACT := λf. λn. IFTHENELSE (LEQ n 1) 1 (MUL n ((f f)(SUB n 1)))
+(Y FACT) 1

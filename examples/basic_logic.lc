@@ -4,5 +4,26 @@ AND := λp.λq.p q p
 OR := λp.λq.p p q
 NOT := λp.p FALSE TRUE
 IFTHENELSE := λp.λa.λb.p a b
+SUCC := λn.λf.λx.f (n f x)
+PRED := λn.λf.λx.n (λg.λh.h (g f)) (λu.x) (λu.u)
+PLUS := λm.λn.λf.λx.m f (n f x)
+SUB := λm.λn.n PRED m
+MULT := λm.λn.λf.m (n f)
+POW := λx.λy.y x
+ISZERO := λn.n (λx.FALSE) TRUE
+LEQ := λm.λn.ISZERO (SUB m n)
+0 := λf.λx.x
+1 := SUCC 0
+2 := SUCC 1
+3 := SUCC 2
+4 := SUCC 3
+5 := SUCC 4
+6 := SUCC 5
+7 := SUCC 6
+8 := SUCC 7
+9 := SUCC 8
+10 := SUCC 9
 AND TRUE FALSE
 OR TRUE FALSE
+LEQ 10 1
+LEQ 1 10

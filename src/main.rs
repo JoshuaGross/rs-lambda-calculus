@@ -7,13 +7,10 @@ use std::fs::File;
 use std::io::prelude::*;
 use std::error::Error;
 
-use std::env;
 /**
  * main
  */
 fn main() -> Result<(), Box<dyn Error>> {
-  let args: Vec<String> = env::args().collect();
-
   let filename = std::env::args().nth(1).expect("no filename given");
 
   let mut file = File::open(filename)?;
