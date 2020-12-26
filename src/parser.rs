@@ -4,7 +4,7 @@ use crate::term::{Term, TermOrDef, Program};
 
 use nom::{
   branch::alt,
-  bytes::complete::{tag},
+  bytes::complete::{tag, take_until},
   character::complete::{char, one_of, space0, multispace0},
   combinator::{recognize},
   sequence::{preceded, terminated},
@@ -77,8 +77,25 @@ pub fn parse_defn(s: &str) -> IResult<&str, TermOrDef> {
     Ok((s, TermOrDef::Definition(n, term)))
 }
 
+fn comment(s: &str) -> IResult<&str, ()> {
+  let (s, _) = alt((tag("#"), tag("//")))(s)?;
+  let (s, _) = multispace0(s)?;
+  let (s, _) = take_until("\n")(s)?;
+  let (s, _) = multispace0(s)?;
+
+  Ok((s, ()))
+}
+
+fn multicomment0(s: &str) -> IResult<&str, ()> {
+  fold_many0(
+    comment,
+    (),
+    |acc, _| acc
+  )(s)
+}
+
 pub fn parse_expressions(s: &str) -> IResult<&str, Program> {
-    let (s, vec) = terminated(preceded(multispace0, separated_list1(preceded(space0, terminated(char('\n'), space0)), alt((parse_defn, parse_term)))), multispace0)(s)?;
+    let (s, vec) = terminated(terminated(preceded(multispace0, separated_list1(preceded(space0, terminated(char('\n'), space0)), preceded(multicomment0, terminated(alt((parse_defn, parse_term)), multicomment0)))), multispace0), multicomment0)(s)?;
     Ok((s, Program(vec)))
 }
 
