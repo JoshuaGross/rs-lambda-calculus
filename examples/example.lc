@@ -1,0 +1,28 @@
+0 := (λf.λx.x)
+SUCC := λn.λf.λx.f (n f x)
+PLUS := λm.λn.λf.λx.(m f) ((n f) x)
+MULT := λm.λn.λf.m (n f)
+POW := λx.λy.y x
+1 := SUCC 0
+2 := SUCC 1
+3 := SUCC 2
+4 := SUCC 3
+5 := SUCC 4
+6 := SUCC 5
+7 := SUCC 6
+8 := SUCC 7
+10 := PLUS 5 5
+20 := PLUS 10 10
+30 := PLUS 20 10
+16 := PLUS 20 6
+100 := MULT 10 10
+0
+1
+2
+3
+4
+5
+10
+20
+100
+POW 2 8
