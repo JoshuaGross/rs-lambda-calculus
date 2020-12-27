@@ -18,11 +18,11 @@ LEQ := λm.λn.ISZERO (SUB m n)
 3 := SUCC 2
 4 := SUCC 3
 5 := SUCC 4
-#6 := SUCC 5
-#7 := SUCC 6
-#8 := SUCC 7
-#9 := SUCC 8
-#10 := SUCC 9
+6 := SUCC 5
+7 := SUCC 6
+8 := SUCC 7
+9 := SUCC 8
+10 := SUCC 9
 Y := (λg.(λx.g (x x)) (λx.g (x x)))
 FACT := λf. (λn. (IFTHENELSE (LEQ n 1) 1 (MULT n (f (SUB n 1)))))
 #3
@@ -45,6 +45,10 @@ FACT := λf. (λn. (IFTHENELSE (LEQ n 1) 1 (MULT n (f (SUB n 1)))))
 (Y FACT) 1
 (Y FACT) 2
 (Y FACT) 3
+(Y FACT) 4
+(Y FACT) 5
+(Y FACT) 6
+(Y FACT) 7
 //(\f. \a . \b . \c . f a (f b c)) PLUS 1 2 3
 //FACT
 //FACT 3

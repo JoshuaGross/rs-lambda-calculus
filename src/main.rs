@@ -3,7 +3,6 @@
 mod parser;
 mod term;
 mod machine;
-mod name_gen;
 
 use std::fs::File;
 use std::io::prelude::*;
@@ -22,8 +21,7 @@ fn main() -> Result<(), Box<dyn Error>> {
   let parser_res = parser::parse_terms(&contents).unwrap().1;
   println!("Parsed:\n{}", parser_res);
 
-  let mut name_gen = name_gen::NameGen{curr_ident: "x".to_string()};
-  let reduced = machine::reduce(&parser_res, &mut name_gen);
+  let reduced = machine::reduce(&parser_res);
   println!("Reduced:\n{}", reduced);
 
   Ok(())
