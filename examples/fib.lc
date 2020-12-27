@@ -1,0 +1,57 @@
+TRUE := λx.λy.x
+FALSE := λx.λy.y
+AND := λp.λq.p q p
+OR := λp.λq.p p q
+NOT := λp.p FALSE TRUE
+IFTHENELSE := λp.λa.λb.p a b
+SUCC := λn.λf.λx.f (n f x)
+PRED := λn.λf.λx.n (λg.λh.h (g f)) (λu.x) (λu.u)
+PLUS := λm.λn.λf.λx.m f (n f x)
+SUB := λm.λn.n PRED m
+MULT := λm.λn.λf.m (n f)
+POW := λx.λy.y x
+ISZERO := λn.n (λx.FALSE) TRUE
+LEQ := λm.λn.ISZERO (SUB m n)
+0 := λf.λx.x
+1 := SUCC 0
+2 := SUCC 1
+3 := SUCC 2
+4 := SUCC 3
+5 := SUCC 4
+6 := SUCC 5
+7 := SUCC 6
+8 := SUCC 7
+9 := SUCC 8
+10 := SUCC 9
+PAIR := λx.λy.λf.f x y
+FIRST := λp.p TRUE
+SECOND := λp.p FALSE
+// Explanation of PHI and FIB here: https://algorithm.cs.uct.ac.za/lecture/lambda_calculus/lambda_calculus.pdf
+PHI := λx.PAIR (SECOND x) (PLUS (FIRST x) (SECOND x))
+FIB := λn.FIRST (n PHI (PAIR 0 1))
+FIB 0
+FIB 1
+FIB 2
+FIB 3
+FIB 4
+FIB 5
+FIB 6
+FIB 7
+FIB 8
+FIB_9 := FIB 9
+FIB_9
+FIB_10 := FIB 10
+FIB_10
+FIB_11 := FIB (PLUS 10 1)
+FIB_11
+FIB_12 := FIB (PLUS 10 2)
+FIB_12
+FIB_13 := FIB (PLUS 10 3)
+FIB_13
+FIB_14 := FIB (PLUS 10 4)
+FIB_14
+FIB_15 := FIB (PLUS 10 5)
+FIB_15
+FIB_20 := FIB (PLUS 10 10)
+FIB_20
+FIB FIB_10
