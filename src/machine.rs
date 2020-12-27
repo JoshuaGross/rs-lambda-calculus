@@ -2,6 +2,8 @@ use crate::term::{Term, TermOrDef, Program};
 
 use std::collections::HashMap;
 
+const MAX_RECURSION_DEPTH: i16 = 10;
+
 fn count_max_binders(term: &Term) -> i16 {
     match term {
         Term::Var(_) => 0,
@@ -104,7 +106,7 @@ fn replace(term: &Term, var: &str, substitution: &Term, hm: &HashMap<String, Ter
             let t2p = Box::new(replace(&(**t2), var, substitution, hm, depth));
             // Prevent infinite recursion
             let t = Term::Application(t1p, t2p);
-            let reduced = if depth > 5 {
+            let reduced = if depth > MAX_RECURSION_DEPTH {
                 t
             } else {
                 reduce_term(&t, hm, depth+1)
@@ -115,41 +117,26 @@ fn replace(term: &Term, var: &str, substitution: &Term, hm: &HashMap<String, Ter
 }
 
 pub fn reduce_term(term: &Term, hm: &HashMap<String, Term>, depth: i16) -> Term {
-    // let term_copied = term.clone();
-    // println!("reduce_term before: {}", depth, /* term */);
-
-    let reduced_term = match term {
-        Term::Application(t1, t2) => match &**t1 {
-            Term::Abstraction(param, body) => {
-                // Prevent infinite recursion
-                let replaced_term = replace(&Box::new(body), &param, &Box::new(t2), hm, depth);
-                // Prevent infinite recursion
-                if depth > 5 {
-                    replaced_term
-                } else {
+    if depth > MAX_RECURSION_DEPTH {
+        // Prevent infinite recursion
+        term.clone()
+    } else {
+        match term {
+            Term::Application(t1, t2) => match &**t1 {
+                Term::Abstraction(param, body) => {
+                    let replaced_term = replace(&Box::new(body), &param, &Box::new(t2), hm, depth);
                     reduce_term(&replaced_term, hm, depth+1)
-                }
-            },
-            _ => {
-                if depth > 5 {
-                    // Prevent infinite recursion
-                    Term::Application(t1.clone(), t2.clone())
-                } else {
+                },
+                _ => {
                     Term::Application(Box::new(reduce_term(&t1, hm, depth)), Box::new(reduce_term(&t2, hm, depth)))
                 }
-            }
-        },
-        Term::Abstraction(param, body) => {
-            if depth > 5 {
-                // Prevent infinite recursion
-                term.clone()
-            } else {
+            },
+            Term::Abstraction(param, body) => {
                 Term::Abstraction(param.to_string(), Box::new(reduce_term(&body, hm, depth+1)))
-            }
-        },
-        _ => term.clone()
-    };
-    reduced_term
+            },
+            _ => term.clone()
+        }
+    }
 }
 
 pub fn reduce(program: &Program) -> Program {
@@ -162,25 +149,21 @@ pub fn reduce(program: &Program) -> Program {
                 v
             }
             TermOrDef::Term(t) => {
-                // println!("REDUCING: t {}", t);
                 let mut prev = t.clone();
                 let mut substituted = perform_lookups(&t, &definitions);
                 // Fully resolve referenced nicknames
                 while substituted != prev {
-                    // println!("RE-LOOKUP: {} {}", prev, substituted);
                     prev = substituted;
                     substituted = perform_lookups(&prev, &definitions);
                 }
                 prev = substituted.clone();
                 let mut reduced = debruijn(&substituted, 0, &definitions);
-                // println!("RE-INDEXED: {}", reduced);
                 // Reduce repeatedly in a loop at the highest level, instead of
                 // relying on deep recursion within `reduce_term` which can cause
                 // stack overflows.
                 // This method is very slow and relies on lots of copying, but this is
                 // a toy, after all.
                 while reduced != prev {
-                    println!("RE-REDUCING: {}", reduced.clone());
                     prev = reduced;
                     reduced = debruijn(&reduce_term(&prev, &definitions, 0), 0, &definitions);
                 }
