@@ -13,36 +13,19 @@ fn count_max_binders(term: &Term) -> i16 {
 }
 
 // Debruijn-index a term
-fn debruijn(term: &Term, initial: i16, hm: &HashMap<String, Term>) -> Term {
+fn debruijn(term: &Term, prefix: &str, initial: i16, hm: &HashMap<String, Term>) -> Term {
     let num_binders = count_max_binders(term);
     match term {
         Term::Var(_) => {
             term.clone()
         },
         Term::Abstraction(param, body) => {
-            let db_index = "_".to_string() + &(num_binders + initial).to_string();
-            Term::Abstraction(db_index.clone(), Box::new(debruijn(&rewrite(&Box::new(body), param, &db_index), initial, hm)))
+            let db_index = prefix.to_string() + &(num_binders + initial).to_string();
+            Term::Abstraction(db_index.clone(), Box::new(debruijn(&rewrite(&Box::new(body), param, &db_index), prefix, initial, hm)))
         },
         Term::Application(t1, t2) => {
             let lhs_initial = initial + count_max_binders(t2);
-            Term::Application(Box::new(debruijn(t1, lhs_initial, hm)), Box::new(debruijn(t2, initial, hm)))
-        }
-    }
-}
-
-fn debruijn_aesthetic(term: &Term, initial: i16, hm: &HashMap<String, Term>) -> Term {
-    let num_binders = count_max_binders(term);
-    match term {
-        Term::Var(_) => {
-            term.clone()
-        },
-        Term::Abstraction(param, body) => {
-            let db_index = &num_binders.to_string();
-            Term::Abstraction(db_index.clone(), Box::new(debruijn_aesthetic(&rewrite(&Box::new(body), param, &db_index), initial, hm)))
-        },
-        Term::Application(t1, t2) => {
-            let lhs_initial = initial + count_max_binders(t2);
-            Term::Application(Box::new(debruijn_aesthetic(t1, lhs_initial, hm)), Box::new(debruijn_aesthetic(t2, initial, hm)))
+            Term::Application(Box::new(debruijn(t1, prefix, lhs_initial, hm)), Box::new(debruijn(t2, prefix, initial, hm)))
         }
     }
 }
@@ -157,7 +140,7 @@ pub fn reduce(program: &Program) -> Program {
                     substituted = perform_lookups(&prev, &definitions);
                 }
                 prev = substituted.clone();
-                let mut reduced = debruijn(&substituted, 0, &definitions);
+                let mut reduced = debruijn(&substituted, "_", 0, &definitions);
                 // Reduce repeatedly in a loop at the highest level, instead of
                 // relying on deep recursion within `reduce_term` which can cause
                 // stack overflows.
@@ -165,9 +148,10 @@ pub fn reduce(program: &Program) -> Program {
                 // a toy, after all.
                 while reduced != prev {
                     prev = reduced;
-                    reduced = debruijn(&reduce_term(&prev, &definitions, 0), 0, &definitions);
+                    reduced = debruijn(&reduce_term(&prev, &definitions, 0), "_", 0, &definitions);
+                    // println!("REDUCED step: t {} reduced to {}", t, reduced);
                 }
-                let ta = debruijn_aesthetic(&reduced, 0, &definitions);
+                let ta = debruijn(&reduced, "", 0, &definitions);
                 println!("REDUCED: t {} reduced to {}", t, ta);
                 v.push(TermOrDef::Term(ta));
                 v
