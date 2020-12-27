@@ -1,6 +1,7 @@
 extern crate nom;
 
 use crate::term::{Term, TermOrDef, Program};
+use std::rc::Rc;
 
 use nom::{
   branch::alt,
@@ -49,7 +50,7 @@ pub fn parse_abstraction(s: &str) -> IResult<&str, Term> {
     let (s, n) = parse_ident(s)?;
     let (s, _) = preceded(space0, terminated(tag("."), space0))(s)?;
     let (s, body) = parse_raw_term(s)?;
-    Ok((s, Term::Abstraction(n, Box::new(body))))
+    Ok((s, Term::Abstraction(n, Rc::new(body))))
 }
 
 pub fn parse_raw_term(s: &str) -> IResult<&str, Term> {
@@ -60,7 +61,7 @@ pub fn parse_raw_term(s: &str) -> IResult<&str, Term> {
       preceded(space0, terminated(alt((parse_var, parse_paren_term, parse_abstraction)), space0)),
       term,
       |acc, term2| {
-        Term::Application(Box::new(acc), Box::new(term2))
+        Term::Application(Rc::new(acc), Rc::new(term2))
       }
     )(s)
 }

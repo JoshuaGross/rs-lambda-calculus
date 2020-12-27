@@ -1,6 +1,7 @@
 use crate::term::{Term, TermOrDef, Program};
 
 use std::collections::HashMap;
+use std::rc::Rc;
 
 const MAX_RECURSION_DEPTH: i16 = 10;
 
@@ -13,62 +14,66 @@ fn count_max_binders(term: &Term) -> i16 {
 }
 
 // Debruijn-index a term
-fn debruijn(term: &Term, prefix: &str, initial: i16, hm: &HashMap<String, Term>) -> Term {
-    let num_binders = count_max_binders(term);
-    match term {
-        Term::Var(_) => term.clone(),
+fn debruijn(term: Rc<Term>, prefix: &str, initial: i16, hm: &HashMap<String, Rc<Term>>) -> Rc<Term> {
+    let num_binders = count_max_binders(&*term);
+    match &*term {
+        Term::Var(_) => term,
         Term::Abstraction(param, body) => {
             let db_index = prefix.to_string() + &(num_binders + initial).to_string();
-            Term::Abstraction(db_index.clone(), Box::new(debruijn(&rewrite(&Box::new(body), param, &db_index), prefix, initial, hm)))
+            Rc::new(Term::Abstraction(db_index.clone(), debruijn(rewrite(body.clone(), &param, &db_index), prefix, initial, hm)))
         },
         Term::Application(t1, t2) => {
-            let lhs_initial = initial + count_max_binders(t2);
-            let lhs = Box::new(debruijn(t1, prefix, lhs_initial, hm));
-            let rhs = Box::new(debruijn(t2, prefix, initial, hm));
-            Term::Application(lhs, rhs)
+            let lhs_initial = initial + count_max_binders(&*t2);
+            let lhs = debruijn(t1.clone(), prefix, lhs_initial, hm);
+            let rhs = debruijn(t2.clone(), prefix, initial, hm);
+            Rc::new(Term::Application(lhs, rhs))
         }
     }
 }
 
-fn perform_lookups(term: &Term, hm: &HashMap<String, Term>) -> Term {
-    match term {
+fn perform_lookups(term: Rc<Term>, hm: &HashMap<String, Rc<Term>>) -> Rc<Term> {
+    match &*term {
         Term::Var(name) => {
             if hm.contains_key(name) {
                 hm.get(name).unwrap().clone()
             } else {
-                term.clone()
+                term
             }
         },
         Term::Abstraction(param, body) => {
-            Term::Abstraction(param.to_string(), Box::new(perform_lookups(body, hm)))
+            Rc::new(Term::Abstraction(param.to_string(), perform_lookups(body.clone(), hm)))
         },
-        Term::Application(t1, t2) => Term::Application(Box::new(perform_lookups(t1, hm)), Box::new(perform_lookups(t2, hm)))
+        Term::Application(t1, t2) => Rc::new(Term::Application(perform_lookups(t1.clone(), hm), perform_lookups(t2.clone(), hm)))
     }
 }
 
 // alpha reduction
-fn rewrite(term: &Term, var: &str, new_var: &str) -> Term {
-    match term {
+fn rewrite(term: Rc<Term>, var: &str, new_var: &str) -> Rc<Term> {
+    match &*term {
         Term::Var(name) => {
             if name == var {
-                Term::Var(new_var.to_string())
+                Rc::new(Term::Var(new_var.to_string()))
             } else {
-                term.clone()
+                term
             }
         },
         Term::Abstraction(param, body) => {
             if param == var {
-                term.clone()
+                term
             } else {
-                Term::Abstraction(param.to_string(), Box::new(rewrite(body, var, new_var)))
+                Rc::new(Term::Abstraction(param.to_string(), rewrite(body.clone(), var, new_var)))
             }
         },
-        Term::Application(t1, t2) => Term::Application(Box::new(rewrite(&(**t1), var, new_var)), Box::new(rewrite(&(**t2), var, new_var)))
+        Term::Application(t1, t2) => {
+            let t1p = rewrite(t1.clone(), var, new_var);
+            let t2p = rewrite(t2.clone(), var, new_var);
+            Rc::new(Term::Application(t1p, t2p))
+        }
     }
 }
 
-fn replace(term: &Term, var: &str, substitution: &Term, hm: &HashMap<String, Term>, depth: i16) -> Term {
-    match term {
+fn replace(term: Rc<Term>, var: &str, substitution: Rc<Term>, hm: &HashMap<String, Rc<Term>>, depth: i16) -> Rc<Term> {
+    match &*term {
         Term::Var(name) => {
             if name == var {
                 substitution.clone()
@@ -78,78 +83,81 @@ fn replace(term: &Term, var: &str, substitution: &Term, hm: &HashMap<String, Ter
         },
         Term::Abstraction(param, body) => {
             if param == var {
-                term.clone()
+                term
             } else {
-                Term::Abstraction(param.to_string(), Box::new(replace(body, var, substitution, hm, depth+1)))
+                Rc::new(Term::Abstraction(param.to_string(), replace(body.clone(), var, substitution, hm, depth+1)))
             }
         },
         Term::Application(t1, t2) => {
-            let t1p = Box::new(replace(&(**t1), var, substitution, hm, depth));
-            let t2p = Box::new(replace(&(**t2), var, substitution, hm, depth));
+            let t1p = replace(t1.clone(), var, substitution.clone(), hm, depth);
+            let t2p = replace(t2.clone(), var, substitution.clone(), hm, depth);
             // Prevent infinite recursion
-            let tp = Term::Application(t1p, t2p);
+            let tp = Rc::new(Term::Application(t1p, t2p));
             if depth > MAX_RECURSION_DEPTH {
                 tp
             } else {
-                reduce_term(&tp, hm, depth+1)
+                reduce_term(tp, hm, depth+1)
             }
         }
     }
 }
 
-pub fn reduce_term(term: &Term, hm: &HashMap<String, Term>, depth: i16) -> Term {
+pub fn reduce_term(term: Rc<Term>, hm: &HashMap<String, Rc<Term>>, depth: i16) -> Rc<Term> {
     if depth > MAX_RECURSION_DEPTH {
         // Prevent infinite recursion
-        term.clone()
+        term
     } else {
-        match term {
+        match &*term {
             Term::Application(t1, t2) => match &**t1 {
                 Term::Abstraction(param, body) => {
-                    let replaced_term = replace(&Box::new(body), &param, &Box::new(t2), hm, depth);
-                    reduce_term(&replaced_term, hm, depth+1)
+                    let replaced_term = replace(body.clone(), &param, t2.clone(), hm, depth);
+                    reduce_term(replaced_term, hm, depth+1)
                 },
-                _ => Term::Application(Box::new(reduce_term(&t1, hm, depth)), Box::new(reduce_term(&t2, hm, depth)))
+                _ => {
+                    let t1p = reduce_term(t1.clone(), hm, depth);
+                    let t2p = reduce_term(t2.clone(), hm, depth);
+                    Rc::new(Term::Application(t1p, t2p))
+                }
             },
             Term::Abstraction(param, body) => {
-                Term::Abstraction(param.to_string(), Box::new(reduce_term(&body, hm, depth+1)))
+                Rc::new(Term::Abstraction(param.to_string(), reduce_term(body.clone(), hm, depth+1)))
             },
-            _ => term.clone()
+            _ => term
         }
     }
 }
 
 pub fn reduce(program: &Program) -> Program {
-    let mut definitions: HashMap<String, Term> = HashMap::new();
+    let mut definitions: HashMap<String, Rc<Term>> = HashMap::new();
 
     Program(program.0.iter().fold(Vec::new(), |mut v, term| {
         match term {
             TermOrDef::Definition(name, term) => {
-                definitions.insert(name.to_string(), term.clone());
+                definitions.insert(name.to_string(), Rc::new(term.clone()));
                 v
             }
             TermOrDef::Term(t) => {
-                let mut prev = t.clone();
-                let mut substituted = perform_lookups(&t, &definitions);
+                let mut prev = Rc::new(t.clone());
+                let mut substituted = perform_lookups(prev.clone(), &definitions);
                 // Fully resolve referenced nicknames
-                while substituted != prev {
-                    prev = substituted;
-                    substituted = perform_lookups(&prev, &definitions);
+                while *substituted != *prev {
+                    prev = substituted.clone();
+                    substituted = perform_lookups(prev.clone(), &definitions);
                 }
                 prev = substituted.clone();
-                let mut reduced = debruijn(&substituted, "_", 0, &definitions);
+                let mut reduced = debruijn(substituted, "_", 0, &definitions);
                 // Reduce repeatedly in a loop at the highest level, instead of
                 // relying on deep recursion within `reduce_term` which can cause
                 // stack overflows.
                 // This method is very slow and relies on lots of copying, but this is
                 // a toy, after all.
-                while reduced != prev {
+                while *reduced != *prev {
                     prev = reduced;
-                    reduced = debruijn(&reduce_term(&prev, &definitions, 0), "_", 0, &definitions);
-                    // println!("REDUCED step: t {} reduced to {}", t, reduced);
+                    reduced = debruijn(reduce_term(prev.clone(), &definitions, 0), "_", 0, &definitions);
                 }
-                let ta = debruijn(&reduced, "", 0, &definitions);
+                let ta = debruijn(reduced, "", 0, &definitions);
                 println!("REDUCED: t {} reduced to {}", t, ta);
-                v.push(TermOrDef::Term(ta));
+                v.push(TermOrDef::Term((*ta).clone()));
                 v
             }
         }

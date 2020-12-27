@@ -1,11 +1,12 @@
 pub type Name = String;
 use std::fmt;
+use std::rc::Rc;
 
 #[derive(Clone, Debug,PartialEq)]
 pub enum Term {
   Var(Name),
-  Abstraction(Name, Box<Term>),
-  Application(Box<Term>, Box<Term>)
+  Abstraction(Name, Rc<Term>),
+  Application(Rc<Term>, Rc<Term>)
 }
 
 #[derive(Clone, Debug,PartialEq)]
