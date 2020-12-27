@@ -7,7 +7,7 @@ const MAX_RECURSION_DEPTH: i16 = 10;
 fn count_max_binders(term: &Term) -> i16 {
     match term {
         Term::Var(_) => 0,
-        Term::Abstraction(_, t1) => 1 + count_max_binders(t1),
+        Term::Abstraction(_, t) => 1 + count_max_binders(t),
         Term::Application(t1, t2) => count_max_binders(t1) + count_max_binders(t2)
     }
 }
@@ -16,16 +16,16 @@ fn count_max_binders(term: &Term) -> i16 {
 fn debruijn(term: &Term, prefix: &str, initial: i16, hm: &HashMap<String, Term>) -> Term {
     let num_binders = count_max_binders(term);
     match term {
-        Term::Var(_) => {
-            term.clone()
-        },
+        Term::Var(_) => term.clone(),
         Term::Abstraction(param, body) => {
             let db_index = prefix.to_string() + &(num_binders + initial).to_string();
             Term::Abstraction(db_index.clone(), Box::new(debruijn(&rewrite(&Box::new(body), param, &db_index), prefix, initial, hm)))
         },
         Term::Application(t1, t2) => {
             let lhs_initial = initial + count_max_binders(t2);
-            Term::Application(Box::new(debruijn(t1, prefix, lhs_initial, hm)), Box::new(debruijn(t2, prefix, initial, hm)))
+            let lhs = Box::new(debruijn(t1, prefix, lhs_initial, hm));
+            let rhs = Box::new(debruijn(t2, prefix, initial, hm));
+            Term::Application(lhs, rhs)
         }
     }
 }
@@ -59,7 +59,6 @@ fn rewrite(term: &Term, var: &str, new_var: &str) -> Term {
         Term::Abstraction(param, body) => {
             if param == var {
                 term.clone()
-                // Term::Abstraction(new_var.to_string(), Box::new(rewrite(body, var, new_var)))
             } else {
                 Term::Abstraction(param.to_string(), Box::new(rewrite(body, var, new_var)))
             }
@@ -88,13 +87,12 @@ fn replace(term: &Term, var: &str, substitution: &Term, hm: &HashMap<String, Ter
             let t1p = Box::new(replace(&(**t1), var, substitution, hm, depth));
             let t2p = Box::new(replace(&(**t2), var, substitution, hm, depth));
             // Prevent infinite recursion
-            let t = Term::Application(t1p, t2p);
-            let reduced = if depth > MAX_RECURSION_DEPTH {
-                t
+            let tp = Term::Application(t1p, t2p);
+            if depth > MAX_RECURSION_DEPTH {
+                tp
             } else {
-                reduce_term(&t, hm, depth+1)
-            };
-            reduced
+                reduce_term(&tp, hm, depth+1)
+            }
         }
     }
 }
@@ -110,9 +108,7 @@ pub fn reduce_term(term: &Term, hm: &HashMap<String, Term>, depth: i16) -> Term 
                     let replaced_term = replace(&Box::new(body), &param, &Box::new(t2), hm, depth);
                     reduce_term(&replaced_term, hm, depth+1)
                 },
-                _ => {
-                    Term::Application(Box::new(reduce_term(&t1, hm, depth)), Box::new(reduce_term(&t2, hm, depth)))
-                }
+                _ => Term::Application(Box::new(reduce_term(&t1, hm, depth)), Box::new(reduce_term(&t2, hm, depth)))
             },
             Term::Abstraction(param, body) => {
                 Term::Abstraction(param.to_string(), Box::new(reduce_term(&body, hm, depth+1)))
